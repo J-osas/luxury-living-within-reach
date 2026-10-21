@@ -9,6 +9,7 @@ import { Home } from "@/pages/home"
 import { LevelMap } from "@/pages/level-map"
 import { Profile } from "@/pages/profile"
 import { Results } from "@/pages/results"
+import { SignOutScreen } from "@/pages/sign-out"
 import { Splash } from "@/pages/splash"
 import { VerifyScreen } from "@/pages/verify"
 
@@ -21,6 +22,7 @@ export function App() {
           <Route path="start" element={<GetStarted />} />
           <Route path="auth" element={<AuthScreen />} />
           <Route path="verify" element={<VerifyScreen />} />
+          <Route path="sign-out" element={<SignOutScreen />} />
           <Route element={<WithNav />}>
             <Route path="home" element={<Home />} />
             <Route path="play" element={<LevelMap />} />

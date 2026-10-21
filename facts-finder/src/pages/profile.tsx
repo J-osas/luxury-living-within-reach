@@ -5,7 +5,7 @@ import { GameButton } from "@/components/game-button"
 import { Overline } from "@/components/shell"
 import { useTheme } from "@/components/theme-provider"
 import { useHydrated } from "@/hooks/use-hydrated"
-import { usePlayer, useSession, playerLevel } from "@/store/player"
+import { useSession, playerLevel } from "@/store/player"
 import { cn } from "cn"
 
 const themes = [
@@ -18,7 +18,6 @@ export function Profile() {
   const navigate = useNavigate()
   const { theme, setTheme } = useTheme()
   const { account, profile, email } = useSession()
-  const signOut = usePlayer((state) => state.signOut)
   const hydrated = useHydrated()
   const clears = Object.values(profile.paths).reduce(
     (sum, path) => sum + path.completed.length,
@@ -83,13 +82,7 @@ export function Profile() {
           Progress, the session, and your theme stay in this browser. Nothing is sent to a server.
         </p>
       </section>
-      <GameButton
-        variant="ghost"
-        onClick={() => {
-          signOut()
-          navigate("/start", { replace: true })
-        }}
-      >
+      <GameButton variant="ghost" onClick={() => navigate("/sign-out")}>
         Sign out
       </GameButton>
     </main>
