@@ -9,6 +9,9 @@ import { usePlayer } from "@/store/player"
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
+const authTabClass =
+  "h-full! rounded-xl border-transparent! font-display font-extrabold shadow-none! ring-0! outline-none! data-active:bg-lime! data-active:text-ink! dark:data-active:border-transparent! dark:data-active:bg-lime! dark:data-active:text-ink! focus-visible:border-transparent! focus-visible:ring-0! focus-visible:outline-none!"
+
 export function AuthScreen() {
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
@@ -93,17 +96,11 @@ export function AuthScreen() {
         onValueChange={(value) => switchMode(value as "signup" | "login")}
         className="mt-5"
       >
-        <TabsList className="grid h-12 w-full grid-cols-2 rounded-2xl bg-card p-1">
-          <TabsTrigger
-            value="signup"
-            className="font-display h-10 rounded-xl font-extrabold data-active:bg-lime data-active:text-ink"
-          >
+        <TabsList className="grid h-12! w-full grid-cols-2 items-stretch! rounded-2xl bg-card p-1">
+          <TabsTrigger value="signup" className={authTabClass}>
             Sign up
           </TabsTrigger>
-          <TabsTrigger
-            value="login"
-            className="font-display h-10 rounded-xl font-extrabold data-active:bg-lime data-active:text-ink"
-          >
+          <TabsTrigger value="login" className={authTabClass}>
             Log in
           </TabsTrigger>
         </TabsList>
@@ -112,7 +109,7 @@ export function AuthScreen() {
       <div className="mt-4 flex flex-col gap-3">
         <GameButton
           variant="ghost"
-          className="bg-ivory text-ink hover:bg-ivory border-transparent"
+          className="border-transparent bg-ivory text-ink hover:bg-ivory"
           disabled={busy !== null}
           onClick={() => social("google")}
         >
@@ -121,7 +118,7 @@ export function AuthScreen() {
         </GameButton>
         <GameButton
           variant="ghost"
-          className="bg-ivory text-ink hover:bg-ivory border-transparent"
+          className="border-transparent bg-ivory text-ink hover:bg-ivory"
           disabled={busy !== null}
           onClick={() => social("apple")}
         >
@@ -136,7 +133,11 @@ export function AuthScreen() {
 
       <form className="flex flex-col gap-3" onSubmit={submit} noValidate>
         {mode === "signup" ? (
-          <Field id="username" label="Username" hint="This is the name other players would see.">
+          <Field
+            id="username"
+            label="Username"
+            hint="This is the name other players would see."
+          >
             <Input
               id="username"
               value={username}
@@ -163,7 +164,9 @@ export function AuthScreen() {
             type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            autoComplete={mode === "signup" ? "new-password" : "current-password"}
+            autoComplete={
+              mode === "signup" ? "new-password" : "current-password"
+            }
             className="h-[52px] rounded-[14px] border-2 bg-card px-3 text-base"
           />
         </Field>
@@ -213,7 +216,9 @@ function Field({
 }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <Label htmlFor={id} className="text-sm font-semibold">{label}</Label>
+      <Label htmlFor={id} className="text-sm font-semibold">
+        {label}
+      </Label>
       {children}
       {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
     </div>
