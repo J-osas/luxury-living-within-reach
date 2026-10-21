@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react"
+import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { motion, useReducedMotion } from "framer-motion"
 import { Check } from "lucide-react"
@@ -9,6 +9,14 @@ import { LEVEL_COUNT, PATHS, type PathId } from "@/data/questions"
 import { useHydrated } from "@/hooks/use-hydrated"
 import { currentLevel, usePlayer, useSession } from "@/store/player"
 import { cn } from "cn"
+
+type PathSegment = {
+  x1: number
+  y1: number
+  x2: number
+  y2: number
+  walked: boolean
+}
 
 export function LevelMap() {
   const navigate = useNavigate()
@@ -22,7 +30,51 @@ export function LevelMap() {
   const reduce = useReducedMotion()
   const current = currentLevel(profile.paths[path])
   const currentRef = useRef<HTMLButtonElement | null>(null)
+  const mapRef = useRef<HTMLDivElement | null>(null)
+  const nodeRefs = useRef<Array<HTMLButtonElement | null>>([])
+  const [segments, setSegments] = useState<PathSegment[]>([])
   const notice = params.get("locked")
+  const completed = profile.paths[path].completed
+
+  useLayoutEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+
+    function place() {
+      const box = map?.getBoundingClientRect()
+      if (!box) return
+      const points = []
+      for (let level = LEVEL_COUNT; level >= 1; level -= 1) {
+        const node = nodeRefs.current[level]
+        if (!node) continue
+        const rect = node.getBoundingClientRect()
+        points.push({
+          level,
+          x: rect.left + rect.width / 2 - box.left,
+          y: rect.top + rect.height / 2 - box.top,
+        })
+      }
+      const next: PathSegment[] = []
+      for (let index = 0; index < points.length - 1; index += 1) {
+        const above = points[index]
+        const below = points[index + 1]
+        if (!above || !below) continue
+        next.push({
+          x1: above.x,
+          y1: above.y,
+          x2: below.x,
+          y2: below.y,
+          walked: completed.includes(below.level),
+        })
+      }
+      setSegments(next)
+    }
+
+    place()
+    const observer = new ResizeObserver(place)
+    observer.observe(map)
+    return () => observer.disconnect()
+  }, [completed, current, path])
 
   useEffect(() => {
     if (hydrated && !email) navigate("/start", { replace: true })
@@ -69,7 +121,28 @@ export function LevelMap() {
       <p className="text-sm text-muted-foreground">
         Level {current} of {LEVEL_COUNT}
       </p>
-      <div className="relative mx-auto mt-4 flex w-full max-w-xs flex-col gap-3">
+      <div
+        ref={mapRef}
+        className="relative mx-auto mt-6 flex w-full max-w-xs flex-col gap-10"
+      >
+        <svg
+          className="pointer-events-none absolute inset-0 h-full w-full"
+          aria-hidden="true"
+        >
+          {segments.map((segment) => (
+            <line
+              key={`${segment.x1}-${segment.y1}-${segment.x2}-${segment.y2}`}
+              x1={segment.x1}
+              y1={segment.y1}
+              x2={segment.x2}
+              y2={segment.y2}
+              strokeWidth={segment.walked ? 8 : 6}
+              strokeLinecap="round"
+              strokeDasharray={segment.walked ? "0.1 16" : undefined}
+              className={segment.walked ? "stroke-lime" : "stroke-[#6d8cb3]"}
+            />
+          ))}
+        </svg>
         {Array.from({ length: LEVEL_COUNT }, (_, index) => LEVEL_COUNT - index).map(
           (level) => {
             const done = profile.paths[path].completed.includes(level)
@@ -80,12 +153,15 @@ export function LevelMap() {
               <div
                 key={level}
                 className={cn(
-                  "flex items-center",
-                  level % 2 === 0 ? "justify-end" : "justify-start"
+                  "relative z-10 flex items-center",
+                  level % 2 === 0 ? "justify-end pr-2" : "justify-start pl-2"
                 )}
               >
                 <motion.button
-                  ref={isCurrent ? currentRef : undefined}
+                  ref={(node) => {
+                    nodeRefs.current[level] = node
+                    if (isCurrent) currentRef.current = node
+                  }}
                   type="button"
                   onClick={() => openLevel(level)}
                   whileTap={locked && !reduce ? { x: [0, -6, 6, -4, 0] } : undefined}
