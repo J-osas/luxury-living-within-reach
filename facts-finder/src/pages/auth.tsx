@@ -1,9 +1,8 @@
-import { useState, type FormEvent, type ReactNode } from "react"
+import { useState, type FormEvent } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { Faxi } from "@/components/faxi"
 import { GameButton } from "@/components/game-button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { usePlayer } from "@/store/player"
 
@@ -133,43 +132,37 @@ export function AuthScreen() {
 
       <form className="flex flex-col gap-3" onSubmit={submit} noValidate>
         {mode === "signup" ? (
-          <Field
+          <Input
             id="username"
-            label="Username"
-            hint="This is the name other players would see."
-          >
-            <Input
-              id="username"
-              value={username}
-              onChange={(event) => setUsername(event.target.value)}
-              autoComplete="username"
-              className="h-[52px] rounded-[14px] border-2 bg-card px-3 text-base"
-            />
-          </Field>
+            value={username}
+            onChange={(event) => setUsername(event.target.value)}
+            autoComplete="username"
+            aria-label="Username"
+            placeholder="Username"
+            className="h-[52px] rounded-[14px] border-2 bg-card px-3 text-base"
+          />
         ) : null}
-        <Field id="email" label="Email">
-          <Input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            autoComplete="email"
-            className="h-[52px] rounded-[14px] border-2 bg-card px-3 text-base"
-            aria-invalid={error?.includes("email") || undefined}
-          />
-        </Field>
-        <Field id="password" label="Password">
-          <Input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            autoComplete={
-              mode === "signup" ? "new-password" : "current-password"
-            }
-            className="h-[52px] rounded-[14px] border-2 bg-card px-3 text-base"
-          />
-        </Field>
+        <Input
+          id="email"
+          type="email"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          autoComplete="email"
+          aria-label="Email"
+          placeholder="Email"
+          className="h-[52px] rounded-[14px] border-2 bg-card px-3 text-base"
+          aria-invalid={error?.includes("email") || undefined}
+        />
+        <Input
+          id="password"
+          type="password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          autoComplete={mode === "signup" ? "new-password" : "current-password"}
+          aria-label="Password"
+          placeholder="Password"
+          className="h-[52px] rounded-[14px] border-2 bg-card px-3 text-base"
+        />
         {mode === "login" ? (
           <button
             type="button"
@@ -200,28 +193,6 @@ export function AuthScreen() {
         buttons are placeholders and do not contact those services.
       </p>
     </main>
-  )
-}
-
-function Field({
-  id,
-  label,
-  hint,
-  children,
-}: {
-  id: string
-  label: string
-  hint?: string
-  children: ReactNode
-}) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <Label htmlFor={id} className="text-sm font-semibold">
-        {label}
-      </Label>
-      {children}
-      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
-    </div>
   )
 }
 

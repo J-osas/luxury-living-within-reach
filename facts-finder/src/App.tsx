@@ -3,6 +3,7 @@ import { PhoneFrame, WithNav } from "@/components/shell"
 import { AuthScreen } from "@/pages/auth"
 import { Compete } from "@/pages/compete"
 import { Discover } from "@/pages/discover"
+import { FeedbackScreen } from "@/pages/feedback"
 import { Gameplay } from "@/pages/gameplay"
 import { GetStarted } from "@/pages/get-started"
 import { Home } from "@/pages/home"
@@ -23,6 +24,7 @@ export function App() {
           <Route path="auth" element={<AuthScreen />} />
           <Route path="verify" element={<VerifyScreen />} />
           <Route path="sign-out" element={<SignOutScreen />} />
+          <Route path="feedback" element={<FeedbackScreen />} />
           <Route element={<WithNav />}>
             <Route path="home" element={<Home />} />
             <Route path="play" element={<LevelMap />} />

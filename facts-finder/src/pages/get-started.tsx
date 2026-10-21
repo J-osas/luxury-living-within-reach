@@ -102,6 +102,13 @@ export function GetStarted() {
         <GameButton variant="ghost" onClick={() => navigate("/auth?mode=login")}>
           I already have an account
         </GameButton>
+        <button
+          type="button"
+          className="text-sm font-semibold text-[var(--cyan-ink)]"
+          onClick={() => navigate("/feedback")}
+        >
+          Send feedback
+        </button>
       </Rise>
     </main>
   )

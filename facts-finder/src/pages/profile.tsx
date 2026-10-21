@@ -82,6 +82,9 @@ export function Profile() {
           Progress, the session, and your theme stay in this browser. Nothing is sent to a server.
         </p>
       </section>
+      <GameButton variant="ghost" onClick={() => navigate("/feedback")}>
+        Send feedback
+      </GameButton>
       <GameButton variant="ghost" onClick={() => navigate("/sign-out")}>
         Sign out
       </GameButton>
