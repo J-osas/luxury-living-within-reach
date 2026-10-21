@@ -23,7 +23,11 @@ export function GetStarted() {
           </h1>
         </div>
       </div>
-      <ul className="mt-6 flex flex-col gap-3">
+      <div className="mt-6 flex items-center gap-2">
+        <Faxi pose="explaining" alt="" className="h-12 w-12" />
+        <Overline>How a round works</Overline>
+      </div>
+      <ul className="mt-3 flex flex-col gap-3">
         {points.map((point) => (
           <li key={point.title} className="rounded-2xl border border-border bg-card p-4">
             <p className="font-display text-lg font-extrabold">{point.title}</p>

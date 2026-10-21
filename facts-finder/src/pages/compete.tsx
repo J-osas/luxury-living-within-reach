@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { Faxi } from "@/components/faxi"
 import { GameButton } from "@/components/game-button"
 import { Overline } from "@/components/shell"
 import { Card } from "@/components/ui/card"
@@ -7,12 +8,16 @@ import { Label } from "@/components/ui/label"
 
 const friends = ["Amara", "Tunde", "Chioma"]
 
+type CompeteMoment = "search" | "challenge"
+
 export function Compete() {
   const [notice, setNotice] = useState<string | null>(null)
+  const [moment, setMoment] = useState<CompeteMoment | null>(null)
   const [code, setCode] = useState("")
 
-  function soon(message: string) {
+  function soon(message: string, next: CompeteMoment) {
     setNotice(message)
+    setMoment(next)
   }
 
   return (
@@ -22,17 +27,26 @@ export function Compete() {
         <h1 className="font-display text-[28px] font-extrabold">Compete</h1>
       </div>
       <Card className="gap-3 rounded-2xl border-2 border-cyan bg-card p-4 ring-0">
-        <p className="font-display text-xl font-extrabold">Live 1v1 duel</p>
-        <p className="text-sm text-muted-foreground">
-          Same questions, same timer, one winner. Live rooms are not connected yet.
-        </p>
-        <GameButton onClick={() => soon("Find opponent is coming soon.")}>
+        <div className="flex items-center gap-3">
+          <Faxi
+            pose={moment === "search" ? "running" : "playing"}
+            alt=""
+            className="h-16 w-16 shrink-0"
+          />
+          <div>
+            <p className="font-display text-xl font-extrabold">Live 1v1 duel</p>
+            <p className="text-sm text-muted-foreground">
+              Same questions, same timer, one winner. Live rooms are not connected yet.
+            </p>
+          </div>
+        </div>
+        <GameButton onClick={() => soon("Find opponent is coming soon.", "search")}>
           Find opponent
         </GameButton>
       </Card>
       <Card className="gap-3 rounded-2xl border border-border bg-card p-4 ring-0">
         <p className="font-display text-xl font-extrabold">Host or join a room</p>
-        <GameButton variant="ghost" onClick={() => soon("Room codes are coming soon.")}>
+        <GameButton variant="ghost" onClick={() => soon("Room codes are coming soon.", "search")}>
           Create room
         </GameButton>
         <div className="flex flex-col gap-1.5">
@@ -52,7 +66,8 @@ export function Compete() {
             soon(
               code.length < 4
                 ? "Enter a code of at least 4 characters."
-                : "That room isn't live in this preview."
+                : "That room isn't live in this preview.",
+              "search"
             )
           }
         >
@@ -71,7 +86,7 @@ export function Compete() {
               <button
                 type="button"
                 className="min-h-11 rounded-full border border-border px-4 text-sm font-bold"
-                onClick={() => soon(`Challenges for ${friend} are coming soon.`)}
+                onClick={() => soon(`Challenges for ${friend} are coming soon.`, "challenge")}
               >
                 Challenge
               </button>
@@ -83,9 +98,14 @@ export function Compete() {
         </p>
       </section>
       {notice ? (
-        <p role="status" className="rounded-2xl bg-card px-4 py-3 text-sm font-semibold">
-          {notice}
-        </p>
+        <div role="status" className="flex items-center gap-3 rounded-2xl bg-card px-4 py-3">
+          <Faxi
+            pose={moment === "challenge" ? "cheerful" : "running"}
+            alt=""
+            className="h-12 w-12 shrink-0"
+          />
+          <p className="text-sm font-semibold">{notice}</p>
+        </div>
       ) : null}
     </main>
   )

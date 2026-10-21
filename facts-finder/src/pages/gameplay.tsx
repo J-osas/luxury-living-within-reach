@@ -144,22 +144,37 @@ export function Gameplay() {
 
       {round.phase === "question" ? (
         <div className="mt-auto flex items-center gap-3 pt-5">
-          <Faxi pose="thinking" alt="" className="h-16 w-16" />
+          <Faxi
+            pose={round.index === 0 ? "encouraging" : "thinking"}
+            alt=""
+            className="h-16 w-16"
+          />
           <p className="rounded-2xl bg-ivory px-3 py-2 text-[15px] font-semibold text-ink">
-            Take your time. You've got this.
+            {round.index === 0 ? "You've got this." : "Take your time."}
           </p>
         </div>
       ) : (
         <section className="mt-4 rounded-2xl bg-ivory p-4 text-ink">
           <div className="flex items-center gap-3">
             <Faxi
-              pose={correct ? "cheerful" : "encouraging"}
+              pose={
+                correct
+                  ? round.streak >= 3
+                    ? "excited"
+                    : "cheerful"
+                  : round.mistakes >= MISTAKE_LIMIT
+                    ? "supportive"
+                    : "encouraging"
+              }
               alt=""
               className="h-16 w-16"
             />
             <h2 className="font-display text-xl font-extrabold">{heading}</h2>
           </div>
-          <p className="mt-2 text-[15px] leading-relaxed">{question.explanation}</p>
+          <div className="mt-3 flex items-start gap-3">
+            <Faxi pose="explaining" alt="" className="h-12 w-12 shrink-0" />
+            <p className="text-[15px] leading-relaxed">{question.explanation}</p>
+          </div>
           {correct ? (
             <p className="mt-2 text-sm font-extrabold text-[#3f6212]">
               +{round.answers.at(-1)?.points ?? 0} pts

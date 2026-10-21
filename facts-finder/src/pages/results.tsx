@@ -33,13 +33,15 @@ export function Results() {
       <div className="flex flex-col items-center text-center">
         <Faxi
           pose={
-            result.leveledUp
-              ? "achievement"
-              : result.passed
-                ? "celebrating"
-                : "encouraging"
+            result.leveledUp ? "levelup" : result.passed ? "celebrating" : "supportive"
           }
-          alt={result.passed ? "Faxi celebrating" : "Faxi encouraging you"}
+          alt={
+            result.leveledUp
+              ? "Faxi with a level-up trophy"
+              : result.passed
+                ? "Faxi celebrating"
+                : "Faxi staying with you"
+          }
           className="h-36 w-36"
         />
         <Overline>
@@ -134,7 +136,12 @@ export function Results() {
         )}
       </div>
       {showReview ? (
-        <ul className="mt-4 flex flex-col gap-3">
+        <div className="mt-4">
+          <div className="mb-3 flex items-center gap-2">
+            <Faxi pose="explaining" alt="" className="h-12 w-12" />
+            <Overline>Worth keeping</Overline>
+          </div>
+        <ul className="flex flex-col gap-3">
           {result.missed.map((fact) => (
             <li key={fact.text} className="rounded-2xl border border-border bg-card p-3">
               <p className="font-semibold">{fact.text}</p>
@@ -145,6 +152,7 @@ export function Results() {
             </li>
           ))}
         </ul>
+        </div>
       ) : null}
     </main>
   )

@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom"
+import { Faxi } from "@/components/faxi"
 import { Overline } from "@/components/shell"
 import { PATHS, questions } from "@/data/questions"
 
@@ -15,19 +16,25 @@ export function Discover() {
 
   return (
     <main className="flex flex-col gap-4 px-5 pt-6">
-      <div>
-        <Overline>Browse</Overline>
-        <h1 className="font-display text-[28px] font-extrabold">Discover</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {questions.length} facts in this preview. Each player gets a different draw.
-        </p>
+      <div className="flex items-center gap-3">
+        <Faxi pose="surprised" alt="" className="h-16 w-16 shrink-0" />
+        <div>
+          <Overline>Browse</Overline>
+          <h1 className="font-display text-[28px] font-extrabold">Discover</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {questions.length} facts in this preview. Each player gets a different draw.
+          </p>
+        </div>
       </div>
-      <article className="rounded-2xl border border-border bg-card p-4">
-        <Overline>{spotlight.label}</Overline>
-        <p className="font-display mt-2 text-xl font-extrabold">{spotlight.text}</p>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          {spotlight.explanation}
-        </p>
+      <article className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4">
+        <Faxi pose="idea" alt="" className="h-16 w-16 shrink-0" />
+        <div>
+          <Overline>{spotlight.label}</Overline>
+          <p className="font-display mt-2 text-xl font-extrabold">{spotlight.text}</p>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            {spotlight.explanation}
+          </p>
+        </div>
       </article>
       <ul className="flex flex-col gap-3">
         {topics.map((topic) => (

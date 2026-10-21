@@ -1,5 +1,6 @@
 import { useEffect } from "react"
 import { useNavigate } from "react-router-dom"
+import { Faxi } from "@/components/faxi"
 import { GameButton } from "@/components/game-button"
 import { Overline } from "@/components/shell"
 import { useTheme } from "@/components/theme-provider"
@@ -32,18 +33,28 @@ export function Profile() {
 
   return (
     <main className="flex flex-col gap-4 px-5 pt-6">
-      <div>
-        <Overline>You</Overline>
-        <h1 className="font-display text-[28px] font-extrabold">
-          {account?.username ?? "Explorer"}
-        </h1>
-        <p className="text-sm text-muted-foreground">{account?.email}</p>
+      <div className="flex items-center gap-3">
+        <Faxi pose="happy" alt="" className="h-16 w-16 shrink-0" />
+        <div>
+          <Overline>You</Overline>
+          <h1 className="font-display text-[28px] font-extrabold">
+            {account?.username ?? "Explorer"}
+          </h1>
+          <p className="text-sm text-muted-foreground">{account?.email}</p>
+        </div>
       </div>
       <dl className="grid grid-cols-3 gap-2">
         <Stat label="Level" value={String(playerLevel(profile.xp))} />
         <Stat label="XP" value={String(profile.xp)} />
         <Stat label="Clears" value={String(clears)} />
       </dl>
+      <section className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3">
+        <Faxi pose="achievement" alt="" className="h-16 w-16 shrink-0" />
+        <div>
+          <Overline>Latest badge</Overline>
+          <p className="font-display text-lg font-extrabold">{profile.badge}</p>
+        </div>
+      </section>
       <section>
         <Overline>Appearance</Overline>
         <div className="mt-2 grid grid-cols-3 gap-2 rounded-2xl bg-card p-1" role="group" aria-label="Colour mode">

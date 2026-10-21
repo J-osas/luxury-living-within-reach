@@ -41,7 +41,10 @@ export function Splash() {
       </motion.div>
       <div className="w-full">
         <Progress value={70} className="h-2.5 bg-border" />
-        <p className="mt-3 text-sm text-muted-foreground">Loading your adventure…</p>
+        <p className="mt-3 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+          <Faxi pose="running" alt="" className="h-8 w-8" />
+          Loading your adventure…
+        </p>
       </div>
     </main>
   )

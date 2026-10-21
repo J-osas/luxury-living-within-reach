@@ -70,16 +70,24 @@ export function Home() {
         </p>
       </div>
 
-      <GameButton
-        className="h-[68px] text-2xl"
-        onClick={() => play("general", generalLevel)}
-      >
-        Play now
-      </GameButton>
+      <div className="flex items-center gap-3">
+        <Faxi pose="playing" alt="" className="h-16 w-16 shrink-0" />
+        <GameButton
+          className="h-[68px] min-w-0 flex-1 text-2xl"
+          onClick={() => play("general", generalLevel)}
+        >
+          Play now
+        </GameButton>
+      </div>
 
       <Card className="gap-2 rounded-2xl border-2 border-cyan bg-card p-4 ring-0">
-        <Overline>Daily challenge</Overline>
-        <p className="font-display text-xl font-extrabold">Five facts, one sitting</p>
+        <div className="flex items-center gap-3">
+          <Faxi pose="excited" alt="" className="h-14 w-14 shrink-0" />
+          <div>
+            <Overline>Daily challenge</Overline>
+            <p className="font-display text-xl font-extrabold">Five facts, one sitting</p>
+          </div>
+        </div>
         <p className="text-sm text-muted-foreground">
           {dailyDone ? "Bonus already collected today." : "5 questions · +120 XP"}
         </p>
