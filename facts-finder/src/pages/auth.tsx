@@ -10,7 +10,7 @@ import { usePlayer } from "@/store/player"
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 const authTabClass =
-  "h-full! rounded-xl border-transparent! font-display font-extrabold shadow-none! ring-0! outline-none! data-active:bg-lime! data-active:text-ink! dark:data-active:border-transparent! dark:data-active:bg-lime! dark:data-active:text-ink! focus-visible:border-transparent! focus-visible:ring-0! focus-visible:outline-none!"
+  "h-full! rounded-xl border-transparent! font-display font-extrabold shadow-none! ring-0! outline-none! transition-none! data-active:bg-lime! data-active:text-ink! dark:data-active:border-transparent! dark:data-active:bg-lime! dark:data-active:text-ink! focus-visible:border-transparent! focus-visible:ring-0! focus-visible:outline-none!"
 
 export function AuthScreen() {
   const navigate = useNavigate()
