@@ -1,0 +1,97 @@
+import { useEffect } from "react"
+import { useNavigate } from "react-router-dom"
+import { GameButton } from "@/components/game-button"
+import { Overline } from "@/components/shell"
+import { useTheme } from "@/components/theme-provider"
+import { useHydrated } from "@/hooks/use-hydrated"
+import { usePlayer, useSession, playerLevel } from "@/store/player"
+import { cn } from "cn"
+
+const themes = [
+  { id: "system", label: "Device" },
+  { id: "dark", label: "Dark" },
+  { id: "light", label: "Light" },
+] as const
+
+export function Profile() {
+  const navigate = useNavigate()
+  const { theme, setTheme } = useTheme()
+  const { account, profile, email } = useSession()
+  const signOut = usePlayer((state) => state.signOut)
+  const hydrated = useHydrated()
+  const clears = Object.values(profile.paths).reduce(
+    (sum, path) => sum + path.completed.length,
+    0
+  )
+
+  useEffect(() => {
+    if (hydrated && !email) navigate("/start", { replace: true })
+  }, [email, hydrated, navigate])
+
+  if (!hydrated || !email) return <main className="min-h-svh" />
+
+  return (
+    <main className="flex flex-col gap-4 px-5 pt-6">
+      <div>
+        <Overline>You</Overline>
+        <h1 className="font-display text-[28px] font-extrabold">
+          {account?.username ?? "Explorer"}
+        </h1>
+        <p className="text-sm text-muted-foreground">{account?.email}</p>
+      </div>
+      <dl className="grid grid-cols-3 gap-2">
+        <Stat label="Level" value={String(playerLevel(profile.xp))} />
+        <Stat label="XP" value={String(profile.xp)} />
+        <Stat label="Clears" value={String(clears)} />
+      </dl>
+      <section>
+        <Overline>Appearance</Overline>
+        <div className="mt-2 grid grid-cols-3 gap-2 rounded-2xl bg-card p-1" role="group" aria-label="Colour mode">
+          {themes.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              aria-pressed={theme === item.id}
+              onClick={() => setTheme(item.id)}
+              className={cn(
+                "min-h-11 rounded-xl text-sm font-extrabold",
+                theme === item.id ? "bg-lime text-ink" : "text-muted-foreground"
+              )}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Dark matches the game artboards. Light keeps the same lime and cyan jobs on an ivory page.
+        </p>
+      </section>
+      <section className="rounded-2xl border border-border bg-card p-4">
+        <Overline>On this device</Overline>
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+          Progress, the session, and your theme stay in this browser. Nothing is sent to a server.
+        </p>
+      </section>
+      <GameButton
+        variant="ghost"
+        onClick={() => {
+          signOut()
+          navigate("/start", { replace: true })
+        }}
+      >
+        Sign out
+      </GameButton>
+    </main>
+  )
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-border bg-card p-3">
+      <dt className="text-[11px] font-bold tracking-[0.08em] text-muted-foreground uppercase">
+        {label}
+      </dt>
+      <dd className="font-display text-xl font-extrabold">{value}</dd>
+    </div>
+  )
+}
