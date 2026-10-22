@@ -12,12 +12,9 @@ import {
   type PathId,
   type Question,
 } from "@/data/questions"
-
-export type Account = {
-  email: string
-  username: string
-  password: string
-}
+import { normalizeAvatar, type AvatarChoice } from "@/lib/avatar"
+import { accountsOffline, supabase } from "@/lib/supabase"
+import { usernameBase, usernameCandidate } from "@/lib/username"
 
 export type PathProgress = {
   completed: number[]
@@ -52,6 +49,7 @@ export type Profile = {
   dailyClearedOn: string | null
   paths: Record<PathId, PathProgress>
   badge: string
+  feedbackPrompted: boolean
 }
 
 export type RoundAnswer = {
@@ -79,30 +77,59 @@ export type RoundState = {
   questionStartedAt: number
 }
 
-type PendingSignup = {
+export type Account = {
+  id: string
   email: string
+  firstName: string
+  lastName: string
   username: string
+  usernameChangedAt: string | null
+  avatar: AvatarChoice
+}
+
+type SignupInput = {
+  firstName: string
+  lastName: string
+  email: string
   password: string
 }
 
 type PlayerState = {
-  accounts: Account[]
-  sessionEmail: string | null
-  pending: PendingSignup | null
-  profiles: Record<string, Profile>
+  authReady: boolean
+  userId: string | null
+  account: Account | null
+  profile: Profile
   lastResult: RoundResult | null
   round: RoundState | null
-  signUp: (account: Account) => string | null
-  beginSignup: (account: Account) => string | null
-  logIn: (email: string, password: string) => string | null
-  completePending: () => void
-  signInSocial: (provider: "google" | "apple") => void
-  signOut: () => void
-  clearPending: () => void
+  signUp: (input: SignupInput) => Promise<string | null>
+  logIn: (email: string, password: string) => Promise<string | null>
+  signOut: () => Promise<void>
+  changeUsername: (username: string) => Promise<string | null>
+  saveAvatar: (avatar: AvatarChoice) => Promise<string | null>
+  markFeedbackPrompted: () => void
   startRound: (path: PathId, level: number, mode?: "level" | "daily") => void
   answerQuestion: (chosenIndex: number | null, secondsLeft: number) => void
   continueRound: () => "next" | "results"
   clearRound: () => void
+}
+
+type ProfileRow = {
+  id: string
+  first_name: string
+  last_name: string
+  username: string
+  username_changed_at: string | null
+  avatar: unknown
+}
+
+type ProgressRow = {
+  xp: number
+  streak: number
+  last_played_date: string | null
+  daily_cleared_on: string | null
+  paths: Partial<Record<PathId, Partial<PathProgress>>> | null
+  badge: string
+  feedback_prompted: boolean
 }
 
 function emptyPath(): PathProgress {
@@ -121,14 +148,13 @@ export function emptyProfile(): Profile {
       science: emptyPath(),
     },
     badge: "Curious mind",
+    feedbackPrompted: false,
   }
 }
 
 export function currentLevel(progress: PathProgress) {
   for (let level = 1; level <= LEVEL_COUNT; level += 1) {
-    if (!progress.completed.includes(level)) {
-      return level
-    }
+    if (!progress.completed.includes(level)) return level
   }
   return LEVEL_COUNT
 }
@@ -147,100 +173,225 @@ function emailKey(email: string) {
   return email.trim().toLowerCase()
 }
 
+function normalizePath(value: Partial<PathProgress> | undefined): PathProgress {
+  const completed = Array.isArray(value?.completed)
+    ? value.completed.filter((level) => typeof level === "number")
+    : []
+  const attempts = typeof value?.attempts === "number" ? value.attempts : 0
+  return { completed, attempts }
+}
+
+function mapProgress(row: ProgressRow | null): Profile {
+  const base = emptyProfile()
+  if (!row) return base
+  return {
+    xp: row.xp ?? 0,
+    streak: row.streak ?? 0,
+    lastPlayedDate: row.last_played_date,
+    dailyClearedOn: row.daily_cleared_on,
+    paths: {
+      general: normalizePath(row.paths?.general),
+      history: normalizePath(row.paths?.history),
+      science: normalizePath(row.paths?.science),
+    },
+    badge: row.badge || base.badge,
+    feedbackPrompted: Boolean(row.feedback_prompted),
+  }
+}
+
+function mapAccount(row: ProfileRow, email: string): Account {
+  return {
+    id: row.id,
+    email,
+    firstName: row.first_name,
+    lastName: row.last_name,
+    username: row.username,
+    usernameChangedAt: row.username_changed_at,
+    avatar: normalizeAvatar(row.avatar),
+  }
+}
+
+async function usernameIsTaken(candidate: string) {
+  if (!supabase) return true
+  const { data, error } = await supabase.rpc("username_taken", { candidate })
+  if (error) throw error
+  return Boolean(data)
+}
+
+async function chooseUsername(firstName: string, lastName: string) {
+  const base = usernameBase(firstName, lastName)
+  for (let attempt = 1; attempt <= 40; attempt += 1) {
+    const candidate = usernameCandidate(base, attempt)
+    if (!(await usernameIsTaken(candidate))) return candidate
+  }
+  return null
+}
+
+async function loadAccount(userId: string, email: string) {
+  if (!supabase) return accountsOffline
+  const profileResult = await supabase
+    .from("profiles")
+    .select("id, first_name, last_name, username, username_changed_at, avatar")
+    .eq("id", userId)
+    .maybeSingle()
+  if (profileResult.error || !profileResult.data) {
+    return "We could not open that account. Try again."
+  }
+  const progressResult = await supabase
+    .from("progress")
+    .select("xp, streak, last_played_date, daily_cleared_on, paths, badge, feedback_prompted")
+    .eq("user_id", userId)
+    .maybeSingle()
+  usePlayer.setState({
+    userId,
+    account: mapAccount(profileResult.data as ProfileRow, email),
+    profile: mapProgress((progressResult.data as ProgressRow | null) ?? null),
+  })
+  return null
+}
+
+async function pushProgress(userId: string, profile: Profile) {
+  if (!supabase) return
+  await supabase
+    .from("progress")
+    .update({
+      xp: profile.xp,
+      streak: profile.streak,
+      last_played_date: profile.lastPlayedDate,
+      daily_cleared_on: profile.dailyClearedOn,
+      paths: profile.paths,
+      badge: profile.badge,
+      feedback_prompted: profile.feedbackPrompted,
+    })
+    .eq("user_id", userId)
+}
+
+function authError(message: string) {
+  const text = message.toLowerCase()
+  if (text.includes("confirm")) {
+    return "Confirm the email first, or turn off Confirm email in Supabase."
+  }
+  if (text.includes("already")) {
+    return "That email is already in use. Try logging in."
+  }
+  if (text.includes("username") || text.includes("unique") || text.includes("duplicate")) {
+    return "That name was just taken. Try Create account again."
+  }
+  return "Those details could not be saved. Try again."
+}
+
 export const usePlayer = create<PlayerState>()(
   persist(
     (set, get) => ({
-      accounts: [],
-      sessionEmail: null,
-      pending: null,
-      profiles: {},
+      authReady: false,
+      userId: null,
+      account: null,
+      profile: emptyProfile(),
       lastResult: null,
       round: null,
-      beginSignup: (account) => {
-        const email = emailKey(account.email)
-        if (get().accounts.some((item) => item.email === email)) {
-          return "That email is already in use. Try logging in."
+      signUp: async ({ firstName, lastName, email, password }) => {
+        if (!supabase) return accountsOffline
+        let username: string | null
+        try {
+          username = await chooseUsername(firstName, lastName)
+        } catch {
+          return "The account database is missing the username check. Run supabase/schema.sql."
         }
+        if (!username) return "We could not make a username. Try a different first name."
+        const { data, error } = await supabase.auth.signUp({
+          email: emailKey(email),
+          password,
+          options: {
+            data: {
+              first_name: firstName.trim(),
+              last_name: lastName.trim(),
+              username,
+            },
+          },
+        })
+        if (error) return authError(error.message)
+        if (!data.session || !data.user) {
+          return "Turn off Confirm email in Supabase so a new account can sign in immediately."
+        }
+        return loadAccount(data.user.id, data.user.email ?? emailKey(email))
+      },
+      logIn: async (email, password) => {
+        if (!supabase) return accountsOffline
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: emailKey(email),
+          password,
+        })
+        if (error) {
+          return error.message.toLowerCase().includes("confirm")
+            ? "Confirm the email first, or turn off Confirm email in Supabase."
+            : "Those details don't match. Check your email and password."
+        }
+        if (!data.user) return "Those details don't match. Check your email and password."
+        return loadAccount(data.user.id, data.user.email ?? emailKey(email))
+      },
+      signOut: async () => {
+        if (supabase) await supabase.auth.signOut()
+        set({ userId: null, account: null, profile: emptyProfile(), round: null })
+      },
+      changeUsername: async (username) => {
+        const userId = get().userId
+        const account = get().account
+        if (!supabase || !userId || !account) return accountsOffline
+        const { data, error } = await supabase
+          .from("profiles")
+          .update({ username })
+          .eq("id", userId)
+          .select("username, username_changed_at")
+          .single()
+        if (error) {
+          const text = `${error.message} ${error.code ?? ""}`.toLowerCase()
+          if (text.includes("username_locked")) {
+            return "You can change your username again in three months."
+          }
+          if (text.includes("23505") || text.includes("unique") || text.includes("duplicate")) {
+            return "That username is already taken."
+          }
+          if (text.includes("username_invalid")) {
+            return "Use 3 to 16 letters or numbers, with no spaces."
+          }
+          return "The username could not be saved. Try again."
+        }
+        const row = data as { username: string; username_changed_at: string | null }
         set({
-          pending: {
-            email,
-            username: account.username.trim(),
-            password: account.password,
+          account: {
+            ...account,
+            username: row.username,
+            usernameChangedAt: row.username_changed_at,
           },
         })
         return null
       },
-      signUp: (account) => get().beginSignup(account),
-      completePending: () => {
-        const pending = get().pending
-        if (!pending) return
-        const exists = get().accounts.some((item) => item.email === pending.email)
-        set((state) => ({
-          accounts: exists
-            ? state.accounts
-            : [
-                ...state.accounts,
-                {
-                  email: pending.email,
-                  username: pending.username,
-                  password: pending.password,
-                },
-              ],
-          profiles: exists
-            ? state.profiles
-            : { ...state.profiles, [pending.email]: emptyProfile() },
-          sessionEmail: pending.email,
-          pending: null,
-        }))
-      },
-      logIn: (email, password) => {
-        const key = emailKey(email)
-        const account = get().accounts.find((item) => item.email === key)
-        if (!account || account.password !== password) {
-          return "Those details don't match. Check your email and password."
-        }
-        set((state) => ({
-          sessionEmail: key,
-          pending: null,
-          profiles: state.profiles[key]
-            ? state.profiles
-            : { ...state.profiles, [key]: emptyProfile() },
-        }))
+      saveAvatar: async (avatar) => {
+        const userId = get().userId
+        const account = get().account
+        if (!supabase || !userId || !account) return accountsOffline
+        const { error } = await supabase.from("profiles").update({ avatar }).eq("id", userId)
+        if (error) return "The avatar could not be saved. Try again."
+        set({ account: { ...account, avatar } })
         return null
       },
-      signInSocial: (provider) => {
-        const email = `${provider}.player@local.facts`
-        const username = provider === "google" ? "Google player" : "Apple player"
-        set((state) => {
-          const accounts = state.accounts.some((item) => item.email === email)
-            ? state.accounts
-            : [...state.accounts, { email, username, password: "" }]
-          const profiles = state.profiles[email]
-            ? state.profiles
-            : { ...state.profiles, [email]: emptyProfile() }
-          return {
-            accounts,
-            profiles,
-            sessionEmail: email,
-            pending: null,
-          }
-        })
+      markFeedbackPrompted: () => {
+        const profile = { ...get().profile, feedbackPrompted: true }
+        set({ profile })
+        const userId = get().userId
+        if (userId) void pushProgress(userId, profile)
       },
-      signOut: () => set({ sessionEmail: null, round: null }),
-      clearPending: () => set({ pending: null }),
       startRound: (path, level, mode = "level") => {
-        const email = get().sessionEmail
-        if (!email) return
-        const profile = get().profiles[email] ?? emptyProfile()
+        const userId = get().userId
+        if (!userId) return
+        const profile = get().profile
         const attempts =
-          mode === "daily"
-            ? profile.paths[path].attempts
-            : profile.paths[path].attempts + 1
+          mode === "daily" ? profile.paths[path].attempts : profile.paths[path].attempts + 1
         const count = mode === "daily" ? DAILY_COUNT : QUESTIONS_PER_LEVEL
         const seed =
           mode === "daily"
-            ? `${email}|daily|${todayKey()}`
-            : `${email}|${path}|${level}|${attempts}`
+            ? `${userId}|daily|${todayKey()}`
+            : `${userId}|${path}|${level}|${attempts}`
         const nextProfile: Profile = {
           ...profile,
           paths: {
@@ -249,7 +400,7 @@ export const usePlayer = create<PlayerState>()(
           },
         }
         set({
-          profiles: { ...get().profiles, [email]: nextProfile },
+          profile: nextProfile,
           round: {
             path,
             level,
@@ -268,6 +419,7 @@ export const usePlayer = create<PlayerState>()(
             questionStartedAt: Date.now(),
           },
         })
+        void pushProgress(userId, nextProfile)
       },
       answerQuestion: (chosenIndex, secondsLeft) => {
         const round = get().round
@@ -301,8 +453,8 @@ export const usePlayer = create<PlayerState>()(
       },
       continueRound: () => {
         const round = get().round
-        const email = get().sessionEmail
-        if (!round || !email) return "results"
+        const userId = get().userId
+        if (!round || !userId) return "results"
         const failed = round.mistakes >= MISTAKE_LIMIT
         const finished = round.index >= round.questions.length - 1
         if (!failed && !finished) {
@@ -319,19 +471,16 @@ export const usePlayer = create<PlayerState>()(
           return "next"
         }
 
-        const profile = get().profiles[email] ?? emptyProfile()
+        const profile = get().profile
         const passed = !failed && finished
         const alreadyDone =
-          round.mode === "level" &&
-          profile.paths[round.path].completed.includes(round.level)
+          round.mode === "level" && profile.paths[round.path].completed.includes(round.level)
         let xpEarned = passed
           ? 80 + round.correct * 12 + Math.round(round.points / 10)
           : round.correct * 8
         if (passed && alreadyDone) xpEarned = Math.round(xpEarned / 2)
         const dailyBonus =
-          round.mode === "daily" &&
-          passed &&
-          profile.dailyClearedOn !== todayKey()
+          round.mode === "daily" && passed && profile.dailyClearedOn !== todayKey()
         if (dailyBonus) xpEarned += 120
 
         const playedToday = profile.lastPlayedDate === todayKey()
@@ -372,49 +521,84 @@ export const usePlayer = create<PlayerState>()(
               explanation: question?.explanation ?? "",
             }
           })
-        const result: RoundResult = {
-          path: round.path,
-          level: round.level,
-          mode: round.mode,
-          correct: round.correct,
-          total: round.questions.length,
-          mistakes: round.mistakes,
-          points: round.points,
-          xpEarned,
-          passed,
-          bestStreak: round.bestStreak,
-          missed,
-          leveledUp: playerLevel(xp) > beforeLevel,
-        }
         set({
-          profiles: { ...get().profiles, [email]: nextProfile },
-          lastResult: result,
+          profile: nextProfile,
+          lastResult: {
+            path: round.path,
+            level: round.level,
+            mode: round.mode,
+            correct: round.correct,
+            total: round.questions.length,
+            mistakes: round.mistakes,
+            points: round.points,
+            xpEarned,
+            passed,
+            bestStreak: round.bestStreak,
+            missed,
+            leveledUp: playerLevel(xp) > beforeLevel,
+          },
           round: null,
         })
+        void pushProgress(userId, nextProfile)
         return "results"
       },
       clearRound: () => set({ round: null }),
     }),
     {
       name: "facts-finder-player",
-      partialize: (state) => ({
-        accounts: state.accounts,
-        sessionEmail: state.sessionEmail,
-        pending: state.pending,
-        profiles: state.profiles,
-        lastResult: state.lastResult,
-      }),
+      version: 1,
+      partialize: (state) => ({ lastResult: state.lastResult }),
+      migrate: (persisted) => {
+        const data = persisted as { lastResult?: RoundResult | null }
+        return { lastResult: data?.lastResult ?? null }
+      },
     }
   )
 )
 
+function waitForPersist() {
+  return new Promise<void>((resolve) => {
+    if (usePlayer.persist.hasHydrated()) {
+      resolve()
+      return
+    }
+    const unsubscribe = usePlayer.persist.onFinishHydration(() => {
+      unsubscribe()
+      resolve()
+    })
+  })
+}
+
+let booted = false
+
+export function bootPlayer() {
+  if (booted) return
+  booted = true
+  void (async () => {
+    await waitForPersist()
+    try {
+      if (!supabase) return
+      const { data } = await supabase.auth.getSession()
+      const user = data.session?.user
+      if (user) await loadAccount(user.id, user.email ?? "")
+      supabase.auth.onAuthStateChange((event) => {
+        if (event === "SIGNED_OUT") {
+          usePlayer.setState({
+            userId: null,
+            account: null,
+            profile: emptyProfile(),
+            round: null,
+          })
+        }
+      })
+    } finally {
+      usePlayer.setState({ authReady: true })
+    }
+  })()
+}
+
 export function useSession() {
-  const email = usePlayer((state) => state.sessionEmail)
-  const account = usePlayer((state) =>
-    state.accounts.find((item) => item.email === email)
-  )
-  const profile = usePlayer((state) =>
-    email ? (state.profiles[email] ?? emptyProfile()) : emptyProfile()
-  )
-  return { email, account, profile }
+  const account = usePlayer((state) => state.account)
+  const profile = usePlayer((state) => state.profile)
+  return { email: account?.email ?? null, account, profile, userId: account?.id ?? null }
 }

@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom"
 import { PhoneFrame, WithNav } from "@/components/shell"
 import { AuthScreen } from "@/pages/auth"
+import { AvatarScreen } from "@/pages/avatar"
 import { Compete } from "@/pages/compete"
 import { Discover } from "@/pages/discover"
 import { FeedbackScreen } from "@/pages/feedback"
@@ -12,7 +13,6 @@ import { Profile } from "@/pages/profile"
 import { Results } from "@/pages/results"
 import { SignOutScreen } from "@/pages/sign-out"
 import { Splash } from "@/pages/splash"
-import { VerifyScreen } from "@/pages/verify"
 
 export function App() {
   return (
@@ -22,8 +22,8 @@ export function App() {
           <Route index element={<Splash />} />
           <Route path="start" element={<GetStarted />} />
           <Route path="auth" element={<AuthScreen />} />
-          <Route path="verify" element={<VerifyScreen />} />
           <Route path="sign-out" element={<SignOutScreen />} />
+          <Route path="avatar" element={<AvatarScreen />} />
           <Route path="feedback" element={<FeedbackScreen />} />
           <Route element={<WithNav />}>
             <Route path="home" element={<Home />} />

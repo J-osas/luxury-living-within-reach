@@ -8,7 +8,7 @@ import { usePlayer } from "@/store/player"
 export function SignOutScreen() {
   const navigate = useNavigate()
   const hydrated = useHydrated()
-  const email = usePlayer((state) => state.sessionEmail)
+  const email = usePlayer((state) => state.account?.email ?? null)
   const signOut = usePlayer((state) => state.signOut)
 
   useEffect(() => {
@@ -25,14 +25,13 @@ export function SignOutScreen() {
           Are you sure you want to log out?
         </h1>
         <p className="mt-3 max-w-xs text-[15px] leading-relaxed text-muted-foreground">
-          Your progress stays on this device. Log back in with the same email.
+          Your progress stays with this account. Log back in with the same email.
         </p>
       </div>
       <div className="mt-auto flex flex-col gap-3 pt-8">
         <GameButton
           onClick={() => {
-            signOut()
-            navigate("/auth?mode=login", { replace: true })
+            void signOut().then(() => navigate("/auth?mode=login", { replace: true }))
           }}
         >
           Log out

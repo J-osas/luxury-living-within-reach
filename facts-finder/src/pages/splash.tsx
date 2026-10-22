@@ -8,7 +8,7 @@ import { usePlayer } from "@/store/player"
 
 export function Splash() {
   const navigate = useNavigate()
-  const sessionEmail = usePlayer((state) => state.sessionEmail)
+  const sessionEmail = usePlayer((state) => state.account?.email ?? null)
   const hydrated = useHydrated()
   const reduce = useReducedMotion()
 

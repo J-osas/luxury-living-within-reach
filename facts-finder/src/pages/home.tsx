@@ -7,6 +7,8 @@ import { Card } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { PATHS, XP_BAND, type PathId } from "@/data/questions"
 import { useHydrated } from "@/hooks/use-hydrated"
+import { PlayerAvatar } from "@/components/player-avatar"
+import { defaultAvatar } from "@/lib/avatar"
 import { currentLevel, playerLevel, usePlayer, useSession } from "@/store/player"
 import { todayKey } from "@/data/questions"
 
@@ -34,12 +36,15 @@ export function Home() {
 
   return (
     <main className="flex flex-col gap-4 px-5 pt-6">
-      <header className="flex items-center justify-between">
-        <div>
-          <Overline>Good to see you</Overline>
-          <h1 className="font-display text-[26px] font-extrabold">
-            {account?.username ?? "Explorer"}
-          </h1>
+      <header className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <PlayerAvatar avatar={account?.avatar ?? defaultAvatar} className="h-12 w-12 shrink-0" />
+          <div className="min-w-0">
+            <Overline>Good to see you</Overline>
+            <h1 className="font-display truncate text-[26px] font-extrabold">
+              {account?.firstName ?? "Explorer"}
+            </h1>
+          </div>
         </div>
         <p className="rounded-full border border-border px-3 py-1 text-xs font-bold">
           {profile.streak > 0 ? `${profile.streak} day streak` : "Start a streak"}

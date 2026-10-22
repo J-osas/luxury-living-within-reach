@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { useReducedMotion } from "framer-motion"
 import { Faxi } from "@/components/faxi"
+import { FeedbackForm } from "@/components/feedback-form"
 import { GameButton } from "@/components/game-button"
 import { Overline } from "@/components/shell"
 import { Card } from "@/components/ui/card"
@@ -14,8 +15,15 @@ export function Results() {
   const result = usePlayer((state) => state.lastResult)
   const startRound = usePlayer((state) => state.startRound)
   const { profile } = useSession()
+  const markFeedbackPrompted = usePlayer((state) => state.markFeedbackPrompted)
   const reduce = useReducedMotion()
   const [showReview, setShowReview] = useState(false)
+  const [dismissedPrompt, setDismissedPrompt] = useState(false)
+  const clears = Object.values(profile.paths).reduce(
+    (sum, path) => sum + path.completed.length,
+    0
+  )
+  const askForFeedback = !profile.feedbackPrompted && clears >= 2 && !dismissedPrompt
   const score = useCountUp(result?.correct ?? 0, reduce)
   const into = profile.xp % XP_BAND
 
@@ -28,8 +36,34 @@ export function Results() {
   const nextLevel =
     result.mode === "level" ? Math.min(LEVEL_COUNT, result.level + 1) : result.level
 
+  function closePrompt() {
+    setDismissedPrompt(true)
+    markFeedbackPrompted()
+  }
+
   return (
     <main className="flex min-h-svh flex-col px-5 pt-8 pb-8">
+      {askForFeedback ? (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/55">
+          <div className="max-h-[92dvh] w-full max-w-[430px] overflow-y-auto rounded-t-3xl bg-background px-5 pt-5 pb-6">
+            <div className="mb-4 flex items-center gap-3">
+              <Faxi pose="encouraging" alt="" className="h-14 w-14" />
+              <div>
+                <h2 className="font-display text-xl font-extrabold">How is Facts-Finder so far?</h2>
+                <p className="text-sm text-muted-foreground">The game is still being built.</p>
+              </div>
+            </div>
+            <FeedbackForm compact onSent={closePrompt} />
+            <button
+              type="button"
+              className="mt-3 w-full text-sm font-semibold text-[var(--cyan-ink)]"
+              onClick={closePrompt}
+            >
+              Not now
+            </button>
+          </div>
+        </div>
+      ) : null}
       <div className="flex flex-col items-center text-center">
         <Faxi
           pose={
